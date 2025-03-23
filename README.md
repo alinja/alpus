@@ -52,9 +52,38 @@ phase shifing for outputs.
 		in_rst => rst_ah,
 		out_clk0 => clk0,
 		out_clk1 => clk1,
-		out_locked => locked
-	);
+		out_locked => locked );
 ```
+
+## alpus_led_blinker.vhd
+
+Blinks a led. Every design starts with blinking a led to see that configuration succeeds and clocks and reset are working.
+```
+	blink: alpus_led_blinker generic map (
+		PERIOD_LEN => 24
+	) port map (
+		clk => clk_i,
+		rst => rst_i,
+		led => led );
+```
+
+## alpus_filler.vhd
+
+For filling a chip with dummy logic for evaluating clock frequency in a full chip, power consuption etc.
+
+```
+	fill: alpus_filler generic map (
+		ADDER_LEN => 16,
+		ADDER_NUM => 1000
+	) port map (
+		clk => clk_i,
+		rst => rst_i,
+		o => o );
+```
+
+## alpus_example_design.vhd
+
+Template for starting a new project.
 
 ## alpus_wb32_all.vhd
 
@@ -115,6 +144,65 @@ use work.alpus_spi_slave_phy_pkg.all;
 		wb_tom => spim_tom );
 ```
 More documentation in [alpus_spi_slave repo](https://github.com/alinja/alpus_spi_slave).
+
+## alpus_asram_controller.vhd
+
+ A Simple Wishbone to asynchronous SRAM memory chip controller. Supports 32/16/8 bit 
+ memory bus by splitting the 32-bit wishbone transfer in multiple phases as needed.
+ Supported memory configurations:
+
+ 1/2/4 x 8bit; 2/4 x 16bit; 1 x 32bit (single rank)
+
+ * Serialized transfers for narrow chip buses
+ * Configurable timing (one clk resolution), min 2 clk per transfer
+ * Full SRAM bus utilization for pipelined transfers
+ * IOB Registered outputs
+ 
+```
+	ramif: alpus_asram_controller generic map(
+		SRAM_RD_CLKS => 3,
+		SRAM_RDEND_CLKS => 1,
+		SRAM_WR_CLKS => 2,
+		SRAM_WREND_CLKS => 1,
+		SRAM_AWID => 19,
+		SRAM_DWID => 32,
+		SRAM_CEWID => 1,
+		SRAM_WRWID => 1,
+		SRAM_BEWID => 1
+	) port map (
+		clk => clk_i,
+		rst => rst_i,
+		sram_a => sram_a,
+		sram_d => sram_d,
+		sram_nce => sram_nce,
+		sram_noe => sram_noe,
+		sram_nwr => sram_nwr,
+		sram_nbe => sram_nbe,
+		wb_tos => wb_asram_tos,
+		wb_tom => wb_asram_tom );
+```
+ Access timing is configured by SRAM_*_CLKS generics:
+```
+                 ______________
+ addr         XXX______________XXX
+                 _________
+ data(wr)     --<_________>-----XXX
+              __           ____
+ nce/nwr/nbe    \___1*____/ 2* \XX
+
+ 1* SRAM_WR_CLKS: Active write (must be > T_WC_SRAM)
+ 2* SRAM_WREND_CLKS: Rising edge for nwe, bus turnaround
+                 ______________
+ addr         XXX______________XXX
+                        ____
+ data(rd)     ---------<____>-----
+              __           ____
+ nce/noe/nbe    \___1*____/ 2* \XX
+
+ 1* SRAM_RD_CLKS: Read setup (must be > T_CO + T_AA_SRAM + T_IDELAY)
+ 2* SRAM_RDEND_CLKS: Bus turnaround, skipped during read bursts
+
+```
 
 ## alpus_sin_lookup.vhd
 
