@@ -14,8 +14,7 @@ generic(
 	ADDER_LEN : integer := 16;
 	ADDER_NUM : integer := 2;
 	ENA_LEN : integer := 16;
-	HAS_RST : std_logic := '0';
-	LED_ON : std_logic := '1'
+	HAS_RST : std_logic := '0'
 );
 port(
 	clk : in std_logic;
@@ -37,8 +36,7 @@ generic(
 	ADDER_LEN : integer := 16;
 	ADDER_NUM : integer := 2;
 	ENA_LEN : integer := 16;
-	HAS_RST : std_logic := '0';
-	LED_ON : std_logic := '1'
+	HAS_RST : std_logic := '0'
 );
 port(
 	clk : in std_logic;

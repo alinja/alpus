@@ -23,7 +23,7 @@
 -- 12           60.4 68.3 70.9
 -- 14                72.6 80.5 84.5
 -- 16                72.8 84.4 94.7
--- Lookup with 8 bit interpolation (2pi=25/8):
+-- Lookup with 8 bit interpolation (2pi=25/8, uncomment below to use):
 --     16   18   20    22   phase bits total
 -- 12 70.0 70.3
 -- 14 80.0 82.4 82.6
@@ -107,20 +107,20 @@ package alpus_sin_lookup_pkg is
 	
 	component alpus_sin_lookup is
 	generic(
-		PHASE_WID : integer := 10;       -- bits of quadrant+lookup
+		PHASE_WID : integer := 12;       -- bits of quadrant+lookup
 		PHASE_FRACT_WID : integer := 4;  -- bits interpolated
-		D_WID : integer := 12;
+		D_WID : integer := 16;
 		HAS_SIN : std_logic := '1';
 		HAS_COS : std_logic := '1';
 		INTERPOLATE : std_logic := '1';
 		ADDR_REG : std_logic := '0';
 		MEMOUT_REG : std_logic := '1';
-		MEMOUT_REG2 : std_logic := '0'; --quartus needs this instead of ADDR_REG
+		MEMOUT_REG2 : std_logic := '1'; --quartus needs this instead of ADDR_REG
 		INTERPOLATE_REGM1 : std_logic := '1';
 		INTERPOLATE_REGM2 : std_logic := '1';
 		INTERPOLATE_REGM3 : std_logic := '1';
 		INTERPOLATE_REG2XOUT : std_logic := '0';
-		AMPLITUDE_SCALE : real := 1.000
+		AMPLITUDE_SCALE : real := 0.94
 	); port(
 		clk : in std_logic;
 		phase : in unsigned(PHASE_WID+PHASE_FRACT_WID-1 downto 0); -- full range corresponds to full sin period
@@ -154,12 +154,12 @@ package body alpus_sin_lookup_pkg is
 
 	function alpus_sin_lookup_addr( phase : unsigned ) return unsigned is
 	begin
-		if phase(phase'high-1) = '0' then
-			-- quadrant with upward slope 
-			return     phase(phase'high-2 downto 0);
-		else
+		if phase(phase'high-1) = '1' then
 			-- quadrant with downward slope 
 			return not phase(phase'high-2 downto 0);
+		else
+			-- quadrant with upward slope 
+			return     phase(phase'high-2 downto 0);
 		end if;
 	end function;
 
@@ -273,18 +273,18 @@ entity alpus_sin_lookup is
 generic(
 	PHASE_WID : integer := 12;       -- bits of quadrant+lookup
 	PHASE_FRACT_WID : integer := 4;  -- bits interpolated
-	D_WID : integer := 10;
+	D_WID : integer := 16;
 	HAS_SIN : std_logic := '1';
-	HAS_COS : std_logic := '0';
-	INTERPOLATE : std_logic := '0';  -- enables both sin and cos
-	ADDR_REG : std_logic := '1';
+	HAS_COS : std_logic := '1';
+	INTERPOLATE : std_logic := '1';  -- enables both sin and cos
+	ADDR_REG : std_logic := '0';
 	MEMOUT_REG : std_logic := '1';
-	MEMOUT_REG2 : std_logic := '0';  --quartus may need this instead of ADDR_REG
+	MEMOUT_REG2 : std_logic := '1';  --quartus may need this instead of ADDR_REG
 	INTERPOLATE_REGM1 : std_logic := '1';
 	INTERPOLATE_REGM2 : std_logic := '1';
-	INTERPOLATE_REGM3 : std_logic := '0';
+	INTERPOLATE_REGM3 : std_logic := '1';
 	INTERPOLATE_REG2XOUT : std_logic := '0';
-	AMPLITUDE_SCALE : real := 1.000
+	AMPLITUDE_SCALE : real := 0.94
 ); port(
 	clk : in std_logic;
 	phase : in unsigned(PHASE_WID+PHASE_FRACT_WID-1 downto 0); -- full range corresponds to full sin period
@@ -313,17 +313,17 @@ architecture rtl of alpus_sin_lookup is
 
 	signal sin_lookup_quadrant_i : unsigned(1 downto 0);
 	signal sin_val_lookup_i : value_integer;
-	signal sin_lookup_fract_x2pin_i : integer;
+	signal sin_lookup_fract_x2pin_i : integer := 0;
 	signal cos_lookup_quadrant_i : unsigned(1 downto 0);
 	signal cos_val_lookup_i : value_integer;
-	signal cos_lookup_fract_x2pin_i : integer;
+	signal cos_lookup_fract_x2pin_i : integer := 0;
 
 	signal sin_lookup_quadrant_ii : unsigned(1 downto 0);
 	signal sin_val_lookup_ii : value_integer;
-	signal sin_lookup_fract_x2pin_ii : integer;
+	signal sin_lookup_fract_x2pin_ii : integer := 0;
 	signal cos_lookup_quadrant_ii : unsigned(1 downto 0);
 	signal cos_val_lookup_ii : value_integer;
-	signal cos_lookup_fract_x2pin_ii : integer;
+	signal cos_lookup_fract_x2pin_ii : integer := 0;
 
 	--int pl
 
@@ -331,13 +331,13 @@ architecture rtl of alpus_sin_lookup is
 	signal sin_val_lookup_iii : value_integer;
 	signal sin_val_lookup_iii2 : value_integer;
 	signal sin_val_lookup_iii2s : signed(D_WID-1 downto 0) := (others => 'X');
-	signal sin_lookup_fract_x2pin_iii : integer;
+	signal sin_lookup_fract_x2pin_iii : integer := 0;
 	signal sin_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
 	signal cos_lookup_quadrant_iii : unsigned(1 downto 0);
 	signal cos_val_lookup_iii : value_integer;
 	signal cos_val_lookup_iii2 : value_integer;
 	signal cos_val_lookup_iii2s : signed(D_WID-1 downto 0) := (others => 'X');
-	signal cos_lookup_fract_x2pin_iii : integer;
+	signal cos_lookup_fract_x2pin_iii : integer := 0;
 	signal cos_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
 
 	signal sin_lookup_quadrant_iiii : unsigned(1 downto 0);
@@ -662,14 +662,14 @@ end entity alpus_sin_lookup_tb;
 
 
 architecture tb of alpus_sin_lookup_tb is
-	constant SIN_PHASE_BITS : integer := 8;
-	constant SIN_FRACT_BITS : integer := 8;
+	constant SIN_PHASE_BITS : integer := 12;
+	constant SIN_FRACT_BITS : integer := 4;
 	constant SIN_VAL_BITS : integer := 16;
 	constant SIN_AMPLITUDE_SCALE : real := 0.94;
 	constant SIN_VAL_VALUES : integer := 2**SIN_VAL_BITS;
 	constant SIN_PHASE_VALUES : integer := 2**SIN_PHASE_BITS;
 
-	shared variable sin_lookup : alpus_sin_lookup_init_t(0 to SIN_PHASE_VALUES/4-1) := alpus_sin_lookup_init(SIN_PHASE_VALUES, real(SIN_VAL_VALUES)/2-1.0);
+	signal sin_lookup : alpus_sin_lookup_init_t(0 to SIN_PHASE_VALUES/4-1) := alpus_sin_lookup_init(SIN_PHASE_VALUES, real(SIN_VAL_VALUES)/2.0-1.0);
 
 	signal sin_lookup_val : integer range 0 to SIN_VAL_VALUES-1;
 	signal sin_val : signed(SIN_VAL_BITS-1 downto 0);
@@ -757,7 +757,7 @@ begin
 			--phase_acc <= phase_acc + x"02000000";
 
 			-- p1
-			phase_real <= 2.0*MATH_PI * real(to_integer(phase_acc))/(2.0**(phase_acc'length-SIN_PHASE_BITS))/real(SIN_PHASE_VALUES);
+			phase_real <= 2.0*MATH_PI * real(to_integer(signed(phase_acc)))/(2.0**(phase_acc'length-SIN_PHASE_BITS))/real(SIN_PHASE_VALUES);
 			-- p2
 			phase_real_i <= phase_real;
 			phase_real_ii <= phase_real_i;
@@ -787,14 +787,14 @@ begin
 
 		--report "error_acc: " & real'image(error_acc);
 		--report "power_acc: " & real'image(power_acc);
-		--report "DC level: " & to_string(10*log10(dc_acc*dc_acc/len_testrun / power_acc), "%.1f") & " dB";
-		--report "DC level avg: " & to_string(dc_acc/len_testrun, "%.3f") & " LSB";
-		report "Sin(x) SNR: " & to_string(10*log10(power_acc/error_acc), "%.1f") & " dB, " &
-		"DC level: " & to_string(10*log10(dc_acc*dc_acc/len_testrun / power_acc), "%.1f") & " dB, " &
-		"DC level avg: " & to_string(dc_acc/len_testrun, "%.3f") & " LSB";
-		report "Cos(x) SNR: " & to_string(10*log10(power_acc2/error_acc2), "%.1f") & " dB, " &
-		"DC level: " & to_string(10*log10(dc_acc2*dc_acc2/len_testrun / power_acc2), "%.1f") & " dB, " &
-		"DC level avg: " & to_string(dc_acc2/len_testrun, "%.3f") & " LSB";
+		--report "DC level: " & to_string(10.0*log10(dc_acc*dc_acc/real(len_testrun) / power_acc), "%.1f") & " dB";
+		--report "DC level avg: " & to_string(dc_acc/real(len_testrun), "%.3f") & " LSB";
+		report "Sin(x) SNR: " & to_string(10.0*log10(power_acc/error_acc), "%.1f") & " dB, " &
+		"DC level: " & to_string(10.0*log10(dc_acc*dc_acc/real(len_testrun) / power_acc), "%.1f") & " dB, " &
+		"DC level avg: " & to_string(dc_acc/real(len_testrun), "%.3f") & " LSB";
+		report "Cos(x) SNR: " & to_string(10.0*log10(power_acc2/error_acc2), "%.1f") & " dB, " &
+		"DC level: " & to_string(10.0*log10(dc_acc2*dc_acc2/real(len_testrun) / power_acc2), "%.1f") & " dB, " &
+		"DC level avg: " & to_string(dc_acc2/real(len_testrun), "%.3f") & " LSB";
 
 		wait;
 	end process;

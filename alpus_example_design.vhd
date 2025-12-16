@@ -65,7 +65,8 @@ begin
 
 	-- Blinking led to prove device is configured properly and clock is running
 	blink: alpus_led_blinker generic map (
-		PERIOD_LEN => 24
+		PREDIV_LEN => 12,
+		PERIOD_LEN => 12
 	) port map (
 		clk => clk_i,
 		rst => rst_i,
@@ -73,7 +74,7 @@ begin
 
 	fill: alpus_filler generic map (
 		ADDER_LEN => 16,
-		ADDER_NUM => 1300,
+		ADDER_NUM => 20,
 		HAS_RST => '1'
 	) port map (
 		clk => clk_i,
