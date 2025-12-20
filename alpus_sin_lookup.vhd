@@ -231,9 +231,9 @@ package body alpus_sin_lookup_pkg is
 			phase_fract_quadrant := not phase_fract;
 		end if;
 		phase_fract_centered := signed(phase_fract_quadrant - (2**(phase_fract_quadrant'length-1))); --signed, zero corresponds half lsb
-		return to_integer(2*phase_fract_centered) + to_integer(4*phase_fract_centered); -- 2*pi=6, 4...6 phase interp bits
-		--return to_integer(2*phase_fract_centered + 4*phase_fract_centered + phase_fract_centered/4); -- 2*pi=25/4, 8...10 interpbits, TODO div round to 0
-		--return to_integer(2*phase_fract_centered + 4*phase_fract_centered + phase_fract_centered/4 + phase_fract_centered/32); -- 2*pi=201/32
+		return 2*to_integer(phase_fract_centered) + 4*to_integer(phase_fract_centered); -- 2*pi=6, 4...6 phase interp bits
+		--return 2*to_integer(phase_fract_centered) + 4*to_integer(phase_fract_centered) + to_integer(phase_fract_centered)/4; -- 2*pi=25/4, 8...10 interpbits, TODO div round to 0
+		--return 2*to_integer(phase_fract_centered) + 4*to_integer(phase_fract_centered) + to_integer(phase_fract_centered)/4 + to_integer(phase_fract_centered)/32; -- 2*pi=201/32
 	end function;
 
 	function alpus_sin_interpolate_term( cos_val : integer; phase_fract_x2pi : integer; 
@@ -247,7 +247,7 @@ package body alpus_sin_lookup_pkg is
 		variable post_div_bits : integer := phase_fract_bits + phase_int_bits;
 		--variable round_compensation : integer := 0;
 		variable round_compensation : integer := 2**(post_div_bits-1);
-		variable sin_fract_term : signed(phase_fract_bits+4+val_bits-1 downto 0);
+		variable sin_fract_term : signed(phase_fract_bits+3+val_bits-1 downto 0);
 	begin
 		sin_fract_term := to_signed(product + round_compensation, sin_fract_term'length);
 		return to_integer(sin_fract_term(sin_fract_term'high downto post_div_bits));
@@ -296,7 +296,7 @@ end entity alpus_sin_lookup;
 architecture rtl of alpus_sin_lookup is
 	constant VAL_VALUES : integer := 2**D_WID;
 	constant PHASE_VALUES : integer := 2**PHASE_WID;
-	constant PHASE_FRACT_X2P_VALUES : integer := 2**(PHASE_FRACT_WID+4);
+	constant PHASE_FRACT_X2P_VALUES : integer := 2**(PHASE_FRACT_WID+3);
 	constant OFFSET_1S_COMPLEMENT : real := 0.0;
 	
 	subtype value_integer is integer range -VAL_VALUES/2 to VAL_VALUES/2-1;
@@ -332,13 +332,13 @@ architecture rtl of alpus_sin_lookup is
 	signal sin_val_lookup_iii2 : value_integer;
 	signal sin_val_lookup_iii2s : signed(D_WID-1 downto 0) := (others => 'X');
 	signal sin_lookup_fract_x2pin_iii : integer := 0;
-	signal sin_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
+	signal sin_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+3-1 downto 0) := (others => 'X');
 	signal cos_lookup_quadrant_iii : unsigned(1 downto 0);
 	signal cos_val_lookup_iii : value_integer;
 	signal cos_val_lookup_iii2 : value_integer;
 	signal cos_val_lookup_iii2s : signed(D_WID-1 downto 0) := (others => 'X');
 	signal cos_lookup_fract_x2pin_iii : integer := 0;
-	signal cos_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
+	signal cos_lookup_fract_x2pin_iiis : signed(PHASE_FRACT_WID+3-1 downto 0) := (others => 'X');
 
 	signal sin_lookup_quadrant_iiii : unsigned(1 downto 0);
 	signal sin_val_lookup_iiii : value_integer;
@@ -401,13 +401,13 @@ begin
 		variable sin_val_lookup_iiiv2 : value_integer;
 		variable sin_val_lookup_iiiv2s : signed(D_WID-1 downto 0);
 		variable sin_lookup_fract_x2pin_iiiv : integer range -PHASE_FRACT_X2P_VALUES/2 to PHASE_FRACT_X2P_VALUES/2-1;
-		variable sin_lookup_fract_x2pin_iiivs : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
+		variable sin_lookup_fract_x2pin_iiivs : signed(PHASE_FRACT_WID+3-1 downto 0) := (others => 'X');
 		variable cos_lookup_quadrant_iiiv : unsigned(1 downto 0);
 		variable cos_val_lookup_iiiv : value_integer;
 		variable cos_val_lookup_iiiv2 : value_integer;
 		variable cos_val_lookup_iiiv2s : signed(D_WID-1 downto 0);
 		variable cos_lookup_fract_x2pin_iiiv : integer range -PHASE_FRACT_X2P_VALUES/2 to PHASE_FRACT_X2P_VALUES/2-1;
-		variable cos_lookup_fract_x2pin_iiivs : signed(PHASE_FRACT_WID+4-1 downto 0) := (others => 'X');
+		variable cos_lookup_fract_x2pin_iiivs : signed(PHASE_FRACT_WID+3-1 downto 0) := (others => 'X');
 
 		variable sin_lookup_quadrant_iiiiv : unsigned(1 downto 0);
 		variable sin_val_lookup_iiiiv : value_integer;
@@ -530,7 +530,7 @@ begin
 					sin_val_lookup_iii2 <= sin_val_lookup_iiv;
 					sin_val_lookup_iii2s <= to_signed(sin_val_lookup_iiv, D_WID);
 					sin_lookup_fract_x2pin_iii <= sin_lookup_fract_x2pin_iiv;
-					sin_lookup_fract_x2pin_iiis <= to_signed(sin_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+4);
+					sin_lookup_fract_x2pin_iiis <= to_signed(sin_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+3);
 					sin_lookup_quadrant_iiiv := sin_lookup_quadrant_iii;
 					sin_val_lookup_iiiv := sin_val_lookup_iii;
 					sin_val_lookup_iiiv2 := sin_val_lookup_iii2;
@@ -543,7 +543,7 @@ begin
 					cos_val_lookup_iii2 <= cos_val_lookup_iiv;
 					cos_val_lookup_iii2s <= to_signed(cos_val_lookup_iiv, D_WID);
 					cos_lookup_fract_x2pin_iii <= cos_lookup_fract_x2pin_iiv;
-					cos_lookup_fract_x2pin_iiis <= to_signed(cos_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+4);
+					cos_lookup_fract_x2pin_iiis <= to_signed(cos_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+3);
 					cos_lookup_quadrant_iiiv := cos_lookup_quadrant_iii;
 					cos_val_lookup_iiiv := cos_val_lookup_iii;
 					cos_val_lookup_iiiv2 := cos_val_lookup_iii2;
@@ -556,14 +556,14 @@ begin
 					sin_val_lookup_iiiv2 := sin_val_lookup_iiv;
 					sin_val_lookup_iiiv2s := to_signed(sin_val_lookup_iiv, D_WID);
 					sin_lookup_fract_x2pin_iiiv := sin_lookup_fract_x2pin_iiv;
-					sin_lookup_fract_x2pin_iiivs := to_signed(sin_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+4);
+					sin_lookup_fract_x2pin_iiivs := to_signed(sin_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+3);
 
 					cos_lookup_quadrant_iiiv := cos_lookup_quadrant_iiv;
 					cos_val_lookup_iiiv := cos_val_lookup_iiv;
 					cos_val_lookup_iiiv2 := cos_val_lookup_iiv;
 					cos_val_lookup_iiiv2s := to_signed(cos_val_lookup_iiv, D_WID);
 					cos_lookup_fract_x2pin_iiiv := cos_lookup_fract_x2pin_iiv;
-					cos_lookup_fract_x2pin_iiivs := to_signed(cos_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+4);
+					cos_lookup_fract_x2pin_iiivs := to_signed(cos_lookup_fract_x2pin_iiv, PHASE_FRACT_WID+3);
 				end if;
 				
 				if INTERPOLATE_REGM2 = '1' then
@@ -771,7 +771,7 @@ begin
 			--error := real(to_integer(sin_val_out)) - SIN_AMPLITUDE_SCALE*real(SIN_VAL_VALUES/2-1)*sin(phase_real_i);
 			error := real(to_integer(sin_val_out)) - sin_real;
 			error2 := real(to_integer(cos_val_out)) - cos_real;
-			if i > 123 then
+			if i > 120 then
 				sin_lookup_err <= integer(error*100.0)+1000000;
 				error_acc := error_acc + error*error;
 				dc_acc := dc_acc + real(to_integer(sin_val_out));
